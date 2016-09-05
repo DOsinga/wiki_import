@@ -34,6 +34,15 @@ Will get you a list of writers that were born in 1905
 
 Schema:
 
+```
+CREATE TABLE wikidata (
+    wikipedia_id TEXT PRIMARY KEY,
+    title TEXT,
+    wikidata_id TEXT,
+    description TEXT,
+    properties JSONB
+)
+```
 
 The import_wikidata script is similar, but in a way more interesting. Wikidata is an explicit attempt to create a semantic representation of the data in all the wiki's. It uses a [Triplestore](https://en.wikipedia.org/wiki/Triplestore) which is
 really powerful. It not only describes properties of objects, but also where the information came from, where more can be found, the sources and everything. It's great but often times way more detailed than needed.
