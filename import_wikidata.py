@@ -5,14 +5,10 @@ from collections import defaultdict
 import argparse
 import subprocess
 import json
-import os
-import re
 
 import psycopg2
 from psycopg2 import extras
 
-CAT_PREFIX = 'Category:'
-DATE_PARSE_RE = re.compile(r'([-+]?[0-9]+)-([0-9][0-9])-([0-9][0-9])T([0-9][0-9]):([0-9][0-9]):([0-9][0-9])Z?')
 
 def setup_db(connection_string):
   conn = psycopg2.connect(connection_string)
@@ -81,29 +77,24 @@ def map_value(value, id_name_map):
 def main(dump, cursor):
   """We do two scans:
      - first collect the id -> name / wikipedia title
-     - then store the actual objects with a jsonb property.
+     - then store the actual objects with a json property.
      The first step takes quite a bit of memory (5Gb) - could possibly be done using a temporary table in postgres.
   """
-  if os.path.isfile('properties.json'):
-    print 'loading properties'
-    id_name_map = json.load(file('properties.json'))
-  else:
-    c = 0
-    skip = 0
-    id_name_map = {}
-    for d in parse_wikidata(subprocess.Popen(['bzcat'], stdin=file(dump), stdout=subprocess.PIPE).stdout):
-      c += 1
-      if c % 1000 == 0:
-        print c, skip
-      if d.get('sitelinks') and d['sitelinks'].get('enwiki'):
-        value = d['sitelinks']['enwiki']['title']
-      elif d['labels'].get('en'):
-        value = id_name_map[d['id']] = d['labels']['en']['value']
-      else:
-        skip += 1
-        continue
-      id_name_map[d['id']] = value
-    json.dump(id_name_map, file('properties.json', 'w'))
+  c = 0
+  skip = 0
+  id_name_map = {}
+  for d in parse_wikidata(subprocess.Popen(['bzcat'], stdin=file(dump), stdout=subprocess.PIPE).stdout):
+    c += 1
+    if c % 1000 == 0:
+      print c, skip
+    if d.get('sitelinks') and d['sitelinks'].get('enwiki'):
+      value = d['sitelinks']['enwiki']['title']
+    elif d['labels'].get('en'):
+      value = id_name_map[d['id']] = d['labels']['en']['value']
+    else:
+      skip += 1
+      continue
+    id_name_map[d['id']] = value
 
   wp_ids = set()
   c = 0
@@ -125,6 +116,13 @@ def main(dump, cursor):
         dupes += 1
         continue
       wp_ids.add(wikipedia_id)
+      # Properties are mapped in a way where we create lists as values for wiki entities if there is more
+      # than one value. For other types, we always pick one value. If there is a preferred value, we'll
+      # pick that one.
+      # Mostly this does what you want. For filtering on colors for flags it alllows for the query:
+      #   SELECT title FROM wikidata WHERE properties @> '{"color": ["Green", "Red", "White"]}'
+      # However, if you'd want all flags that have Blue in them, you'd have to check for just "Blue"
+      # and also ["Blue"].
       for prop_id, claims in d['claims'].items():
         prop_name = id_name_map.get(prop_id)
         if prop_name:
@@ -138,10 +136,6 @@ def main(dump, cursor):
                 if mainsnak['datavalue'].get('type') != 'wikibase-entityid':
                   del lst[:]
                 lst.append(data_value)
-          # One property can have multiple values. It could be because it is a list (the colors of the flag
-          # are red white and blue) or because there are multiple ways of measuring or multiple points in
-          # time. In the first case we store the value as a list, in the second case we try to store a single
-          # value.
           for r in 'preferred', 'normal', 'depricated':
             value = ranks[r]
             if value:
@@ -159,7 +153,7 @@ def main(dump, cursor):
 
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description='Import wikipedia into postgress')
+  parser = argparse.ArgumentParser(description='Import wikidata into postgress')
   parser.add_argument('--postgres', type=str,
                       help='postgres connection string')
   parser.add_argument('dump', type=str,
