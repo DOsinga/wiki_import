@@ -70,7 +70,7 @@ class WikiXmlHandler(xml.sax.handler.ContentHandler):
         self._db_cursor.execute('INSERT INTO wikipedia (title, infobox, wikitext, templates, categories, general) VALUES (%s, %s, %s, %s, %s, %s)',
                                 (self._values['title'], infobox, self._values['text'], templates, categories, general))
         self._count += 1
-        if self._count % 1000:
+        if self._count % 1000 == 0:
           print self._count
       except mwparserfromhell.parser.ParserError:
         print 'mwparser error for:', self._values['title']
