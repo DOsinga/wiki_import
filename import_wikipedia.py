@@ -52,7 +52,7 @@ class WikiXmlHandler(xml.sax.handler.ContentHandler):
 
   def endElement(self, name):
     if name == self._state:
-      self._values[name] = ' '.join(self._buffer)
+      self._values[name] = ''.join(self._buffer)
       self._state = None
       self._buffer = []
 
