@@ -65,13 +65,19 @@ class WikiXmlHandler(xml.sax.handler.ContentHandler):
           if template.startswith(INFOBOX_PREFIX):
             infobox = template[len(INFOBOX_PREFIX):]
             break
+        if len(infobox or '') > 1024 or len(self._values['title']) > 1024:
+          print 'Too long'
+          raise mwparserfromhell.parser.ParserError('too long')
         categories = make_tags(l.title[len(CAT_PREFIX):] for l in wikicode.filter_wikilinks() if l.title.startswith(CAT_PREFIX))
         general = make_tags(x.replace(' of ', ' in ').split(' in ')[0] for x in categories if ' of ' in x or ' in 'in x)
         self._db_cursor.execute('INSERT INTO wikipedia (title, infobox, wikitext, templates, categories, general) VALUES (%s, %s, %s, %s, %s, %s)',
                                 (self._values['title'], infobox, self._values['text'], templates, categories, general))
         self._count += 1
-        if self._count % 1000 == 0:
+        print self._count
+        if self._count % 100 == 0:
           print self._count
+        if self._count % 100000 == 0:
+          raise StopIteration
       except mwparserfromhell.parser.ParserError:
         print 'mwparser error for:', self._values['title']
       self.reset()
