@@ -1,6 +1,6 @@
 # wiki_import
 
-Two small scripts to import wikipedia and wikidata dumps into postgres:
+Three small scripts to import wikipedia and wikidata dumps into postgres:
 
 ## import_wikipedia
 
@@ -69,3 +69,25 @@ Or all the cities that have both Berlin and Los Angelos as their sister cities:
 
 (Mexico City, London, Tehran and Jakarta is the answer)
 
+
+## import_stats
+
+Wikipedia also published dumps of their hourly pageview counts in https://dumps.wikimedia.org/other/pagecounts-ez/
+While not perfect, it does give you an idea of the relative importance of a specific wikipedia page. The schema is quite simple:
+
+```
+CREATE TABLE wikidata (
+    title TEXT PRIMARY KEY,
+    viewcount INTEGER
+)
+```
+
+To make things a little easier, I've added a flag --dumps_to_fetch to the import_stats.py script. This will fetch that many hourly dumps from roughly the last year. They are randomly selected. After that it will import them into the postgres db you point it at.
+
+The table itself is not that interesting, but you can do joins to find out who are the most popular philosopers:
+
+```
+select wikipedia.title, wikistats.viewcount from wikipedia join wikistate wikipedia.infobox = 'philosopher' order by wikistats.viewcount desc limit 25
+```
+
+Or you can go all fancy and do a three way join to get the top capitals with their population.
