@@ -26,9 +26,10 @@ def setup_db(connection_string):
 
 
 def fetch_dumps(dump_dir, dumps_to_fetch):
-  today = datetime.datetime.today()
-  year = today.year
-  if today.month <= 2:
+  # don't try anything in the last month, it might not be online yet
+  last_date = datetime.datetime.today() - datetime.timedelta(30)
+  year = last_date.year
+  if last_date.month <= 2:
     year -= 1
   if calendar.isleap(year):
     days = 366
@@ -38,8 +39,7 @@ def fetch_dumps(dump_dir, dumps_to_fetch):
     local_path = None
     remote_path = None
     while not local_path or os.path.isdir(local_path):
-      # pick a date from a week a go to a week and a year ago
-      random_day = today - datetime.timedelta(days=random.randint(8, days + 7))
+      random_day = last_date - datetime.timedelta(days=random.randint(1, days))
       random_hour = random.randint(1, 24)
       d = {'year': random_day.year, 'month': random_day.month, 'day': random_day.day, 'hour': random_hour}
       remote_path = REMOTE_PATH % d
