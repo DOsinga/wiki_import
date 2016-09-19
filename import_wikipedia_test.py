@@ -4,7 +4,7 @@ import unittest
 import xml
 
 import re
-from import_wikipedia import WikiXmlHandler
+from import_wikipedia import WikiXmlHandler, extact_general
 
 DUMP = """<mediawiki xmlns="http://www.mediawiki.org/xml/export-0.10/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mediawiki.org/xml/export-0.10/ http://www.mediawiki.org/xml/export-0.10.xsd" version="0.10" xml:lang="en">
   <siteinfo>
@@ -96,6 +96,12 @@ class TestImportWikipedia(unittest.TestCase):
     self.assertTrue("<--This is a *citation* from a book, DON'T CHANGE-->" in fc.results[1]['wikitext'])
     self.assertTrue('main article' in fc.results[1]['templates'])
     self.assertTrue('ideas' in fc.results[1]['general'])
+
+  def test_extact_general(self):
+    self.assertEqual(extact_general('something something dark'), None)
+    self.assertEqual(extact_general('the streets of philadelpha'), 'the streets')
+    self.assertEqual(extact_general('paintings by dutch potato eaters'), 'paintings')
+    self.assertEqual(extact_general('Cities in trouble'), 'Cities')
 
 if __name__ == '__main__':
   unittest.main()

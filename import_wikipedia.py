@@ -6,9 +6,12 @@ import xml.sax
 
 import mwparserfromhell
 import psycopg2
+import re
 
 CAT_PREFIX = 'Category:'
 INFOBOX_PREFIX = 'infobox '
+
+RE_GENERAL = re.compile('(.+?)(\ (in|of|by)\ )(.+)')
 
 def setup_db(connection_string):
   conn = psycopg2.connect(connection_string)
@@ -31,7 +34,18 @@ def setup_db(connection_string):
 
 
 def make_tags(iterable):
-  return list(set(x.strip().lower() for x in iterable))
+  return list(set(x.strip().lower() for x in iterable if x and len(x) < 256))
+
+
+def strip_template_name(name):
+  return name.strip_code().strip()
+
+
+def extact_general(category):
+  m = RE_GENERAL.match(category)
+  if m:
+    return m.groups()[0]
+  return None
 
 
 class WikiXmlHandler(xml.sax.handler.ContentHandler):
@@ -59,7 +73,7 @@ class WikiXmlHandler(xml.sax.handler.ContentHandler):
     if name == 'page':
       try:
         wikicode = mwparserfromhell.parse(self._values['text'])
-        templates = make_tags(unicode(template.name) for template in wikicode.filter_templates())
+        templates = make_tags(strip_template_name(template.name) for template in wikicode.filter_templates())
         infobox = None
         for template in templates:
           if template.startswith(INFOBOX_PREFIX):
@@ -69,15 +83,13 @@ class WikiXmlHandler(xml.sax.handler.ContentHandler):
           print 'Too long'
           raise mwparserfromhell.parser.ParserError('too long')
         categories = make_tags(l.title[len(CAT_PREFIX):] for l in wikicode.filter_wikilinks() if l.title.startswith(CAT_PREFIX))
-        general = make_tags(x.replace(' of ', ' in ').split(' in ')[0] for x in categories if ' of ' in x or ' in 'in x)
-        self._db_cursor.execute('INSERT INTO wikipedia (title, infobox, wikitext, templates, categories, general) VALUES (%s, %s, %s, %s, %s, %s)',
+        general = make_tags(extact_general(x) for x in categories)
+        # even though we shouldn't get dupes, sometimes wikidumps are faulty:
+        self._db_cursor.execute('INSERT INTO wikipedia (title, infobox, wikitext, templates, categories, general) VALUES (%s, %s, %s, %s, %s, %s)  ON CONFLICT DO NOTHING',
                                 (self._values['title'], infobox, self._values['text'], templates, categories, general))
         self._count += 1
-        print self._count
-        if self._count % 100 == 0:
-          print self._count
         if self._count % 100000 == 0:
-          raise StopIteration
+          print self._count
       except mwparserfromhell.parser.ParserError:
         print 'mwparser error for:', self._values['title']
       self.reset()
