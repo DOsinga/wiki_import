@@ -16,7 +16,14 @@ CREATE TABLE wikipedia (
 )
 ```
 
-You'll need a dump of the wikipedia (something-pages-articles.xml.bz2) and a postgres connection. It will import
+You'll need a dump of the wikipedia (something-pages-articles.xml.bz2) and a postgres connection
+ to something that has postgis installed. On OSX with brew:
+ 
+     brew install postgres
+     brew install postgis
+  
+  
+ It will import
 all the pages and make them searchable using the name, the id of the infobox (which more or less is equal to the
 primary type of the thing described in the article), the categories, the templates and a generalized version of
 the categories. Categories are generalized by taking the bit of the category before 'of' and 'in'. This can be

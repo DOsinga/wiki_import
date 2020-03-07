@@ -1,0 +1,7 @@
+psycopg2
+mwparserfromhell
+Pillow
+requests
+pyahocorasick
+shapely
+pip-tools
