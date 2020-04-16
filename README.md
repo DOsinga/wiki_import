@@ -1,4 +1,4 @@
-# wiki_import
+# Wikipedia Import
 
 Three small scripts to import wikipedia and wikidata dumps into postgres:
 
