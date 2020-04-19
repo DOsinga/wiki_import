@@ -10,8 +10,9 @@ import random
 import psycopg2
 import requests
 import urllib
+import urllib.parse
 
-REMOTE_PATH = 'https://dumps.wikimedia.org/other/pagecounts-raw/%(year)04d/%(year)04d-%(month)02d/pagecounts-%(year)04d%(month)02d%(day)02d-%(hour)02d0000.gz'
+REMOTE_PATH = 'https://dumps.wikimedia.org/other/pageviews/%(year)04d/%(year)04d-%(month)02d/pageviews-%(year)04d%(month)02d%(day)02d-%(hour)02d0000.gz'
 LOCAL_PATH = 'pagecounts-%(year)04d%(month)02d%(day)02d-%(hour)02d0000.gz'
 
 
@@ -19,7 +20,7 @@ def setup_db(connection_string):
     conn = psycopg2.connect(connection_string)
     cursor = conn.cursor()
     cursor.execute('DROP TABLE IF EXISTS wikistats')
-    cursor.execute('CREATE TABLE wikistats (' '    title TEXT PRIMARY KEY,' '    viewcount INTEGER' ')')
+    cursor.execute('CREATE TABLE wikistats (title TEXT PRIMARY KEY,  viewcount INTEGER)')
     cursor.execute('CREATE INDEX wikistats_viewcount ON wikistats(viewcount)')
     return conn, cursor
 
@@ -28,6 +29,7 @@ def fetch_dumps(dump_dir, dumps_to_fetch):
     # don't try anything in the last month, it might not be online yet
     last_date = datetime.datetime.today() - datetime.timedelta(30)
     year = last_date.year
+    year = 2016
     if last_date.month <= 2:
         year -= 1
     if calendar.isleap(year):
@@ -43,9 +45,9 @@ def fetch_dumps(dump_dir, dumps_to_fetch):
             d = {'year': random_day.year, 'month': random_day.month, 'day': random_day.day, 'hour': random_hour}
             remote_path = REMOTE_PATH % d
             local_path = os.path.join(dump_dir, LOCAL_PATH % d)
-        print 'getting', local_path
+        print('getting', local_path)
         data = requests.get(remote_path).content
-        with file(local_path, 'wb') as fout:
+        with open(local_path, 'wb') as fout:
             fout.write(data)
 
 
@@ -56,24 +58,21 @@ def main(dump_dir, cursor, dumps_to_fetch):
     c = Counter()
     for fn in os.listdir(dump_dir):
         if fn.endswith('.gz'):
-            print fn
+            print(fn)
             path = os.path.join(dump_dir, fn)
-            for line in subprocess.Popen(['zcat'], stdin=file(path), stdout=subprocess.PIPE).stdout:
+            for line in subprocess.Popen(['zcat'], stdin=open(path), stdout=subprocess.PIPE).stdout:
+                line = line.decode('utf8')
                 if line.startswith('en '):
                     bits = line.split(' ')
                     _, wikipedia_id, count, size = bits
                     if not ':' in wikipedia_id:
                         try:
-                            title = urllib.unquote(wikipedia_id).replace('_', ' ').decode('utf8')
+                            title = urllib.parse.unquote(wikipedia_id).replace('_', ' ')
                         except UnicodeDecodeError:
                             continue
                         c[title] += int(count)
-    for k, v in c.iteritems():
-        try:
-            cursor.execute("INSERT INTO wikistats (title, viewcount) VALUES (%s, %s)", (k, v))
-        except:
-            print ` k `, ` v `
-            raise
+    for k, v in c.items():
+        cursor.execute("INSERT INTO wikistats (title, viewcount) VALUES (%s, %s)", (k, v))
     import pprint
 
     pprint.pprint(c.most_common(25))

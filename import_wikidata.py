@@ -85,10 +85,10 @@ def main(dump, cursor):
     c = 0
     skip = 0
     id_name_map = {}
-    for d in parse_wikidata(subprocess.Popen(['bzcat'], stdin=file(dump), stdout=subprocess.PIPE).stdout):
+    for d in parse_wikidata(subprocess.Popen(['bzcat'], stdin=open(dump), stdout=subprocess.PIPE).stdout):
         c += 1
         if c % 1000 == 0:
-            print c, skip
+            print(c, skip)
         if d.get('sitelinks') and d['sitelinks'].get('enwiki'):
             value = d['sitelinks']['enwiki']['title']
         elif d['labels'].get('en'):
@@ -102,10 +102,10 @@ def main(dump, cursor):
     c = 0
     rec = 0
     dupes = 0
-    for d in parse_wikidata(subprocess.Popen(['bzcat'], stdin=file(dump), stdout=subprocess.PIPE).stdout):
+    for d in parse_wikidata(subprocess.Popen(['bzcat'], stdin=open(dump), stdout=subprocess.PIPE).stdout):
         c += 1
         if c % 1000 == 0:
-            print c, rec, dupes
+            print(c, rec, dupes)
         wikipedia_id = d.get('sitelinks', {}).get('enwiki', {}).get('title')
         title = d['labels'].get('en', {}).get('value')
         description = d['descriptions'].get('en', {}).get('value')
@@ -158,7 +158,7 @@ def main(dump, cursor):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Import wikidata into postgress')
     parser.add_argument('--postgres', type=str, help='postgres connection string')
-    parser.add_argument('dump', type=str, help='BZipped wikipedia dump')
+    parser.add_argument('dump', type=str, help='BZipped wikidata dump')
 
     args = parser.parse_args()
     conn, cursor = setup_db(args.postgres)

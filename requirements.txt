@@ -4,16 +4,23 @@
 #
 #    pip-compile
 #
+appdirs==1.4.3            # via black
+attrs==19.3.0             # via black
+black==19.10b0            # via -r requirements.in
 certifi==2019.11.28       # via requests
 chardet==3.0.4            # via requests
-click==7.0                # via pip-tools
+click==7.0                # via black, pip-tools
 idna==2.9                 # via requests
 mwparserfromhell==0.5.4   # via -r requirements.in
+pathspec==0.8.0           # via black
 pillow==7.0.0             # via -r requirements.in
 pip-tools==4.5.1          # via -r requirements.in
 psycopg2==2.8.4           # via -r requirements.in
 pyahocorasick==1.4.0      # via -r requirements.in
+regex==2020.4.4           # via black
 requests==2.23.0          # via -r requirements.in
 shapely==1.7.0            # via -r requirements.in
 six==1.14.0               # via pip-tools
+toml==0.10.0              # via black
+typed-ast==1.4.1          # via black
 urllib3==1.25.8           # via requests

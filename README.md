@@ -94,7 +94,18 @@ To make things a little easier, I've added a flag --dumps_to_fetch to the import
 The table itself is not that interesting, but you can do joins to find out who are the most popular philosopers:
 
 ```
-select wikipedia.title, wikistats.viewcount from wikipedia join wikistate wikipedia.infobox = 'philosopher' order by wikistats.viewcount desc limit 25
+SELECT wikipedia.*, wikistats.viewcount FROM wikipedia 
+JOIN wikistats ON wikipedia.title = wikistats.title WHERE wikipedia.infobox = 'philosopher'
+ORDER BY wikistats.viewcount DESC limit 100
 ```
 
 Or you can go all fancy and do a three way join to get the top capitals with their population.
+
+
+## wiki_trends
+
+The wiki trends script is an application included here that uses an imported
+wikipedia and an imported wikistats set to create a list of people, their
+word counts and their view counts. We can use this then to get an idea of
+how for example the split between man and woman in the wikipedia ordered
+by year of birth has changed.

@@ -22,6 +22,7 @@ def setup_db(connection_string):
     cursor.execute(
         'CREATE TABLE wikipedia ('
         '    title TEXT PRIMARY KEY,'
+        '    wiki_id INTEGER,'
         '    infobox TEXT,'
         '    wikitext TEXT,'
         '    templates TEXT[] NOT NULL DEFAULT \'{}\','
@@ -105,7 +106,7 @@ class WikiXmlHandler(xml.sax.handler.ContentHandler):
         self._values = {}
 
     def startElement(self, name, attrs):
-        if name in ('title', 'text'):
+        if name in ('title', 'text', 'id'):
             self._state = name
 
     def endElement(self, name):
@@ -125,7 +126,10 @@ class WikiXmlHandler(xml.sax.handler.ContentHandler):
                     if template_name.lower() in ('coord missing', 'coord unknown'):
                         continue
                     if any(template_name.lower().startswith(prefix) for prefix in ('coor', 'geolinks')):
-                        lat, lng = parse_coordinate(template)
+                        try:
+                            lat, lng = parse_coordinate(template)
+                        except ValueError:
+                            continue
                         if lat and lng:
                             break
 
@@ -144,7 +148,15 @@ class WikiXmlHandler(xml.sax.handler.ContentHandler):
                 )
                 general = make_tags(extact_general(x) for x in categories)
 
-                to_insert = (self._values['title'], infobox, self._values['text'], templates, categories, general)
+                to_insert = (
+                    self._values['title'],
+                    int(self._values['id']),
+                    infobox,
+                    self._values['text'],
+                    templates,
+                    categories,
+                    general,
+                )
                 if lat is None or lng is None:
                     place_holder = 'NULL'
                 else:
@@ -152,8 +164,10 @@ class WikiXmlHandler(xml.sax.handler.ContentHandler):
                     place_holder = "ST_GeographyFromText('SRID=4326;POINT(%s %s)')"
                 # even though we shouldn't get dupes, sometimes wikidumps are faulty:
                 sql = (
-                    "INSERT INTO wikipedia (title, infobox, wikitext, templates, categories, general, lng_lat) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, " + place_holder + ") ON CONFLICT DO NOTHING"
+                    "INSERT INTO wikipedia "
+                    "(title, wiki_id, infobox, wikitext, templates, categories, general, lng_lat) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, " + place_holder + ") "
+                    "ON CONFLICT DO NOTHING"
                 )
 
                 self._db_cursor.execute(sql, to_insert)
