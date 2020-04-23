@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 
-import ahocorasick
 import argparse
 import json
-import pickle
-from collections import Counter
-from itertools import chain
 
 import psycopg2
 from shapely import wkt

@@ -1,8 +1,12 @@
 black
-psycopg2
+geopandas
 mwparserfromhell
 Pillow
-requests
-pyahocorasick
-shapely
 pip-tools
+psycopg2
+requests
+rtree
+pyahocorasick
+pycountry
+pyyaml
+shapely

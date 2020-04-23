@@ -64,6 +64,8 @@ def main(dump_dir, cursor, dumps_to_fetch):
                 line = line.decode('utf8')
                 if line.startswith('en '):
                     bits = line.split(' ')
+                    if len(bits) != 4:
+                        continue
                     _, wikipedia_id, count, size = bits
                     if not ':' in wikipedia_id:
                         try:
