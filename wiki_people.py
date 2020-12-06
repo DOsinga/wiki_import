@@ -30,6 +30,7 @@ def setup_db(connection_string):
                    '    year_born INTEGER,'
                    '    year_died INTEGER, '
                    '    gender TEXT,'
+                   '    occupation TEXT,'
                    '    field TEXT,'
                    '    country_code TEXT,'
                    '    continent TEXT'
@@ -40,6 +41,7 @@ def setup_db(connection_string):
     cursor.execute('CREATE INDEX wikitrends_gender ON wikitrends(gender)')
     cursor.execute('CREATE INDEX wikitrends_country_code ON wikitrends(country_code)')
     cursor.execute('CREATE INDEX wikitrends_continent ON wikitrends(continent)')
+    cursor.execute('CREATE INDEX wikitrends_occupation ON wikitrends(occupation)')
     cursor.execute('CREATE INDEX wikitrends_field ON wikitrends(field)')
 
     return conn, cursor
@@ -196,24 +198,23 @@ def add_fields(people):
 
     for p in people:
         field_count = Counter()
+        occupation_count = Counter()
         for l in p['wikilinks']:
             if l.startswith(CAT_PREFIX):
                 last_word = l[len(CAT_PREFIX):].lower().rsplit(' ', 1)[-1]
                 f = field_mapping.get(last_word)
                 if f:
                     field_count[f] += 1
+                    occupation_count[last_word] += 1
         infobox_field = infobox_mapping.get(p['infobox'])
         if infobox_field:
             field_count[infobox_field] += 3
 
-        if field_count:
-            field = field_count.most_common(1)[0][0]
-        else:
-            field = ''
-        p['field'] = field
+        p['field'] = field_count.most_common(1)[0][0] if field_count else ''
+        p['occupation'] = occupation_count.most_common(1)[0][0] if occupation_count else ''
 
 
-def main(json_dir, cursor, min_year=1500, max_year=2000):
+def main(json_dir, cursor, min_year=-2000, max_year=2000):
     people = fetch_people(json_dir, cursor, max_year, min_year)
     print('assigning genders')
     assign_genders(people)
@@ -224,17 +225,17 @@ def main(json_dir, cursor, min_year=1500, max_year=2000):
     print('inserting data')
     seen = set()
     for p in people:
-        if p['person_name'] in seen:
+        if p['person_name'] in seen or p['born'] < 200 or (p['died'] and p['died'] < 200):
             continue
         seen.add(p['person_name'])
         cursor.execute("INSERT INTO wikitrends "
                        "(person_name, view_count, year_born, year_died, word_count, gender, "
-                       "continent, country_code, field) "
-                       "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                       "continent, country_code, occupation, field) "
+                       "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                        (p['person_name'], p['view_count'],
                         p['born'], p['died'],
                         p['word_count'], p['gender'],
-                        p['continent'], p['country_code'], p['field']))
+                        p['continent'], p['country_code'], p['occupation'], p['field']))
 
 
 if __name__ == '__main__':
