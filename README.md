@@ -109,3 +109,21 @@ wikipedia and an imported wikistats set to create a list of people, their
 word counts and their view counts. We can use this then to get an idea of
 how for example the split between man and woman in the wikipedia ordered
 by year of birth has changed.
+
+## Douwe runner project
+
+This repo also contains the `wikipeople` project bundle for the douwe runner:
+
+```bash
+python build_db.py
+python build_labels.py
+python path/to/douwe.py .
+```
+
+The generated data files live under `static/` and are intentionally not tracked:
+
+- `static/wikipeople.db`
+- `static/wikipeople.csv.zip`
+- `static/wikipeople.zip`
+
+Generate them locally before running the interactive project page.

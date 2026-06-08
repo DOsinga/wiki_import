@@ -87,3 +87,8 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Generated WikiPeople runner data; build locally with build_db.py/build_labels.py
+static/wikipeople.db
+static/wikipeople.csv.zip
+static/wikipeople.zip

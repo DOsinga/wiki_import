@@ -1,0 +1,129 @@
+<script type="text/markdown" id="info">
+name: Wiki people
+description: >
+  Trends on the Wikipedia for people across time, space and gender. Built from
+  a Wikidata SPARQL import of every human (Q5) with an English Wikipedia
+  article, born 1500–2010.
+github: wiki_import
+files:
+  - [build_db.py, "Wikidata → SQLite importer"]
+  - [build_labels.py, "Resolve QIDs to English labels"]
+</script>
+
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<p>
+Every person on the English Wikipedia, sliced by where and when they were born,
+their gender, and what they did. The underlying database has ~1.9 million people
+and is built straight from Wikidata. Birth years are capped at 1500–2010 — earlier
+data is patchy, later cohorts are mostly too young to be Wikipedia-notable yet.
+</p>
+
+<style>
+.wp-tabs { display: flex; flex-wrap: wrap; gap: 0.4em; margin: 1.25em 0 0.75em; }
+.wp-tabs button {
+  padding: 0.5em 0.95em; border: 1px solid #ccc; background: #fafafa;
+  border-radius: 6px; cursor: pointer; font: inherit; color: inherit;
+  transition: background 0.1s, border-color 0.1s;
+}
+.wp-tabs button:hover { background: #f0f0f0; }
+.wp-tabs button.active {
+  background: #222; color: #fff; border-color: #222;
+}
+.wp-explain {
+  color: #555; max-width: 760px; margin: 0 0 0.75em;
+  min-height: 2.6em; line-height: 1.4;
+}
+.wp-chart-wrap { max-width: 760px; position: relative; }
+.wp-chart { width: 100%; min-height: 440px; }
+.wp-loading {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; color: #888; pointer-events: none;
+}
+</style>
+
+<div class="wp-tabs" role="tablist">
+  <button type="button" data-type="map" data-what="density">Density by country</button>
+  <button type="button" data-type="map" data-what="gender">Gender by country</button>
+  <button type="button" data-type="time_line" data-what="gender">Gender over time</button>
+  <button type="button" data-type="time_line" data-what="occupation">Top occupations over time</button>
+</div>
+
+<p id="wp_explain" class="wp-explain"></p>
+
+<div class="wp-chart-wrap">
+  <div id="wp_chart" class="wp-chart"></div>
+  <div id="wp_loading" class="wp-loading" style="display:none">Loading…</div>
+</div>
+
+<script>
+(function () {
+  const EXPLAIN = {
+    'map|density':
+      "Where everyone with an English Wikipedia article was born. " +
+      "Colour scale is logarithmic, so each step is ~10× more people and the " +
+      "US doesn't drown out the rest of the world. Modern country borders are " +
+      "applied retroactively, so a 17th-century Bavarian is filed under DE.",
+    'map|gender':
+      "Female share of recorded births per country, 1500–2010. Countries with " +
+      "fewer than 50 people in the database are omitted so a single empress " +
+      "doesn't paint Andorra red.",
+    'time_line|gender':
+      "Stacked share of recorded gender per birth year. The female share creeps " +
+      "upward across five centuries; 'other' barely registers until very recently.",
+    'time_line|occupation':
+      "Composition of the ten most common occupations per birth year. People " +
+      "often have multiple occupations, so this counts occupation-slots, not " +
+      "headcount — a 'writer / journalist' shows up twice.",
+  };
+
+  const chart = document.getElementById('wp_chart');
+  const loading = document.getElementById('wp_loading');
+  const explain = document.getElementById('wp_explain');
+  const tabs = Array.from(document.querySelectorAll('.wp-tabs button'));
+  const cache = {};
+
+  function select(type, what, push) {
+    const key = type + '|' + what;
+    tabs.forEach(t => t.classList.toggle(
+      'active', t.dataset.type === type && t.dataset.what === what));
+    explain.textContent = EXPLAIN[key] || '';
+
+    if (push) {
+      const url = new URL(window.location);
+      url.searchParams.set('graph_type', type);
+      url.searchParams.set('graph_what', what);
+      history.replaceState(null, '', url);
+    }
+
+    const draw = data => {
+      cache[key] = data;
+      loading.style.display = 'none';
+      Plotly.newPlot(chart, data.traces, data.layout,
+        {responsive: true, displayModeBar: false});
+    };
+
+    if (cache[key]) { draw(cache[key]); return; }
+
+    loading.style.display = 'flex';
+    Plotly.purge(chart);
+    fetch('/projects/wikipeople/data?graph_type=' + encodeURIComponent(type) +
+          '&graph_what=' + encodeURIComponent(what))
+      .then(r => r.json())
+      .then(draw)
+      .catch(() => {
+        loading.textContent = 'Failed to load chart.';
+      });
+  }
+
+  tabs.forEach(t => t.addEventListener('click',
+    () => select(t.dataset.type, t.dataset.what, true)));
+
+  const params = new URLSearchParams(window.location.search);
+  const initType = params.get('graph_type') || 'map';
+  const initWhat = params.get('graph_what') || 'density';
+  const validKey = tabs.some(t =>
+    t.dataset.type === initType && t.dataset.what === initWhat);
+  select(validKey ? initType : 'map', validKey ? initWhat : 'density', false);
+})();
+</script>
