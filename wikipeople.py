@@ -4,9 +4,7 @@ import sqlite3
 from collections import Counter
 from pathlib import Path
 
-from django.http import HttpResponse, HttpResponseBadRequest
-
-from projects.common import Project
+from projects.common import HttpResponse, HttpResponseBadRequest, Project
 
 DB_PATH = Path(__file__).parent / "static" / "wikipeople.db"
 
